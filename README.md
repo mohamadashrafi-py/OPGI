@@ -9,7 +9,7 @@ OPGI enable you to create gui interface quickly and easily and write now in v.0.
 - clone the OPGI repository
 
 ```
-git clone https://github.com/mohamadashrafi-py/CMS-form-creator.git
+git clone https://github.com/mohamadashrafi-py/OPGI.git
 ```
 
 - create a venv and install requirements
@@ -22,7 +22,7 @@ pip install -r requirements.txt
 use this simple code to have a simple demo
 
 ```
-from Opgi import App, Label, Button, TextInput
+from opgi import App, Label, Button, TextInput
 
 def button_clicked():
     print(f"Button clicked! Text input value: {text_input.text}")
