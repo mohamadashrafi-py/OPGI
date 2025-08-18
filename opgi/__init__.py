@@ -1,4 +1,4 @@
 from .app import App
-from .widgets import Label, Button, TextInput
+from .widgets import Button, Label, TextInput
 
-__all__ = ['App', 'Label', 'Button', 'TextInput']
+__all__ = ["App", "Label", "Button", "TextInput"]
