@@ -363,3 +363,132 @@ class RadioButton(Widget):
 
     def set_on_select(self, callback):
         self.on_select_callback = callback
+
+
+class ComboBox(Widget):
+    def __init__(self, x, y, width=150, height=30, items=None):
+        super().__init__(x, y, width, height)
+        self.items = items or ["Option 1", "Option 2", "Option 3"]
+        self.selected_index = 0
+        self.expanded = False
+        self.item_height = 25
+        self.dropdown_shadow = True
+
+    def draw(self):
+        # Main box
+        gl.glColor3f(1, 1, 1)
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex2f(self.x, self.y)
+        gl.glVertex2f(self.x + self.width, self.y)
+        gl.glVertex2f(self.x + self.width, self.y + self.height)
+        gl.glVertex2f(self.x, self.y + self.height)
+        gl.glEnd()
+
+        # Border
+        border_color = (
+            (0.2, 0.5, 0.8)
+            if (self.expanded or self.app.focused_widget == self)
+            else (0.7, 0.7, 0.7)
+        )
+        gl.glColor3f(*border_color)
+        gl.glLineWidth(1)
+        gl.glBegin(gl.GL_LINE_LOOP)
+        gl.glVertex2f(self.x, self.y)
+        gl.glVertex2f(self.x + self.width, self.y)
+        gl.glVertex2f(self.x + self.width, self.y + self.height)
+        gl.glVertex2f(self.x, self.y + self.height)
+        gl.glEnd()
+
+        # Selected item text
+        selected_text = self.items[self.selected_index]
+        text_x = self.x + 10
+        text_y = self.y + self.height // 2 + 5
+
+        gl.glColor3f(0, 0, 0)
+        gl.glRasterPos2f(text_x, text_y)
+        for char in selected_text:
+            glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
+
+        # Arrow symbol (better looking)
+        arrow = "▼" if self.expanded else "▲"
+        arrow_x = self.x + self.width - 25
+        arrow_y = self.y + self.height // 2 + 5
+        gl.glRasterPos2f(arrow_x, arrow_y)
+        glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(arrow))
+
+        # Dropdown items if expanded
+        if self.expanded:
+            # Draw shadow overlay first
+            if self.dropdown_shadow:
+                gl.glColor4f(0, 0, 0, 0.2)
+                gl.glBegin(gl.GL_QUADS)
+                gl.glVertex2f(0, 0)
+                gl.glVertex2f(self.app.width, 0)
+                gl.glVertex2f(self.app.width, self.app.height)
+                gl.glVertex2f(0, self.app.height)
+                gl.glEnd()
+
+            for i, item in enumerate(self.items):
+                item_y = self.y + self.height + i * self.item_height
+
+                # Highlight selected item
+                if i == self.selected_index:
+                    gl.glColor3f(0.9, 0.9, 0.9)
+                else:
+                    gl.glColor3f(1, 1, 1)
+
+                gl.glBegin(gl.GL_QUADS)
+                gl.glVertex2f(self.x, item_y)
+                gl.glVertex2f(self.x + self.width, item_y)
+                gl.glVertex2f(self.x + self.width, item_y + self.item_height)
+                gl.glVertex2f(self.x, item_y + self.item_height)
+                gl.glEnd()
+
+                # Item border
+                gl.glColor3f(0.8, 0.8, 0.8)
+                gl.glLineWidth(1)
+                gl.glBegin(gl.GL_LINE_LOOP)
+                gl.glVertex2f(self.x, item_y)
+                gl.glVertex2f(self.x + self.width, item_y)
+                gl.glVertex2f(self.x + self.width, item_y + self.item_height)
+                gl.glVertex2f(self.x, item_y + self.item_height)
+                gl.glEnd()
+
+                # Item text
+                gl.glColor3f(0, 0, 0)
+                gl.glRasterPos2f(self.x + 10, item_y + self.item_height // 2 + 5)
+                for char in item:
+                    glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
+
+    def on_click(self):
+        x, y = glfw.get_cursor_pos(self.app.window)
+
+        if not self.expanded:
+            # Check if main box was clicked
+            if self.contains(x, y):
+                self.expanded = True
+                # Bring to front by re-adding to widget list
+                if self in self.app.widgets:
+                    # self.app.widgets.remove(self)
+                    self.app.add_widget(self)
+        else:
+            # Check if an item was clicked
+            item_clicked = False
+            for i in range(len(self.items)):
+                item_y = self.y + self.height + i * self.item_height
+                if (
+                    self.x <= x <= self.x + self.width
+                    and item_y <= y <= item_y + self.item_height
+                ):
+                    self.selected_index = i
+                    item_clicked = True
+                    break
+
+            # Collapse if item was clicked or click was outside
+            if item_clicked or not (
+                self.x <= x <= self.x + self.width
+                and self.y
+                <= y
+                <= self.y + self.height + len(self.items) * self.item_height
+            ):
+                self.expanded = False
