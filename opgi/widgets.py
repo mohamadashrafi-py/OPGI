@@ -244,3 +244,59 @@ class SpinBox(Widget):
             self.value = min(self.value + self.step, self.max)
         elif self.down_hover:
             self.value = max(self.value - self.step, self.min)
+
+
+class CheckButton(Widget):
+    def __init__(self, x, y, text="Checkbox", checked=False):
+        super().__init__(x, y, 20, 20)
+        self.text = text
+        self.checked = checked
+        self.on_change_callback = None
+
+    def draw(self):
+        # Checkbox square
+        gl.glColor3f(1, 1, 1)
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex2f(self.x, self.y)
+        gl.glVertex2f(self.x + self.width, self.y)
+        gl.glVertex2f(self.x + self.width, self.y + self.height)
+        gl.glVertex2f(self.x, self.y + self.height)
+        gl.glEnd()
+
+        # Checkbox border
+        border_color = (
+            (0.2, 0.5, 0.8) if (self.app.focused_widget == self) else (0.7, 0.7, 0.7)
+        )
+        gl.glColor3f(*border_color)
+        gl.glLineWidth(1)
+        gl.glBegin(gl.GL_LINE_LOOP)
+        gl.glVertex2f(self.x, self.y)
+        gl.glVertex2f(self.x + self.width, self.y)
+        gl.glVertex2f(self.x + self.width, self.y + self.height)
+        gl.glVertex2f(self.x, self.y + self.height)
+        gl.glEnd()
+
+        # Checkmark
+        if self.checked:
+            gl.glColor3f(0.2, 0.5, 0.8)
+            gl.glLineWidth(2)
+            gl.glBegin(gl.GL_LINES)
+            gl.glVertex2f(self.x + 5, self.y + 10)
+            gl.glVertex2f(self.x + 10, self.y + 15)
+            gl.glVertex2f(self.x + 10, self.y + 15)
+            gl.glVertex2f(self.x + 15, self.y + 5)
+            gl.glEnd()
+
+        # Label text
+        gl.glColor3f(0, 0, 0)
+        gl.glRasterPos2f(self.x + self.width + 10, self.y + self.height // 2 + 5)
+        for char in self.text:
+            glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
+
+    def on_click(self):
+        self.checked = not self.checked
+        if self.on_change_callback:
+            self.on_change_callback(self.checked)
+
+    def set_on_change(self, callback):
+        self.on_change_callback = callback
