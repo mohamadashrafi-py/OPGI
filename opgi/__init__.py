@@ -1,6 +1,6 @@
 from .app import App
-from .widgets import (Button, CheckButton, ComboBox, Label, RadioButton,
-                      SpinBox, TextInput, List)
+from .widgets import (Button, CheckButton, ComboBox, Label, List, RadioButton,
+                      Slider, SpinBox, TextInput)
 
 __all__ = [
     "App",
@@ -12,4 +12,5 @@ __all__ = [
     "RadioButton",
     "ComboBox",
     "List",
+    "Slider",
 ]

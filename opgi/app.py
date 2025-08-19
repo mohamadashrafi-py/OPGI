@@ -28,6 +28,17 @@ class App:
 
         gl.glClearColor(0.95, 0.95, 0.95, 1)
         self.setup_projection()
+        glfw.set_cursor_pos_callback(self.window, self.on_mouse_move)
+
+    def on_mouse_move(self, window, x, y):
+        if self.focused_widget and hasattr(self.focused_widget, "on_mouse_move"):
+            self.focused_widget.on_mouse_move(x, y)
+
+    # Also add mouse release handling
+    def on_mouse_release(self, window, button, action, mods):
+        if button == glfw.MOUSE_BUTTON_LEFT and action == glfw.RELEASE:
+            if self.focused_widget and hasattr(self.focused_widget, "on_mouse_release"):
+                self.focused_widget.on_mouse_release()
 
     def setup_projection(self):
         gl.glViewport(0, 0, self.width, self.height)
