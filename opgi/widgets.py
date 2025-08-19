@@ -494,9 +494,6 @@ class ComboBox(Widget):
                 self.expanded = False
 
 
-
-
-
 class List:
     def __init__(self, x, y, width, height, items=None):
         self.x = x
@@ -961,3 +958,261 @@ class Slider:
             self.value = new_value
             if self.on_value_change:
                 self.on_value_change(self.value)
+
+
+class ProgressBar:
+    def __init__(self, x, y, width, height, value=0, max_value=100):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.app = None
+        self.value = value
+        self.max_value = max_value
+        self.animation_progress = value  # For smooth animation
+        self.animation_speed = 0.1
+
+        # Colors (modern gradient style)
+        self.background_color = (0.92, 0.92, 0.94)
+        self.border_color = (0.82, 0.82, 0.84)
+        self.progress_color_start = (0.26, 0.52, 0.96)  # Blue gradient start
+        self.progress_color_end = (0.16, 0.42, 0.86)  # Blue gradient end
+        self.glow_color = (0.36, 0.62, 1.0, 0.3)  # Subtle glow
+
+        # Text colors
+        self.text_color = (0.2, 0.2, 0.2)
+        self.text_color_over_progress = (1, 1, 1)
+
+        # Style options
+        self.show_text = True
+        self.show_percentage = True
+        self.rounded_corners = True
+        self.animation_enabled = True
+        self.glow_effect = True
+
+    def draw(self):
+        # Update animation
+        if self.animation_enabled:
+            self._update_animation()
+
+        # Calculate progress width
+        progress_width = (self.animation_progress / self.max_value) * self.width
+        progress_width = max(0, min(progress_width, self.width))
+
+        # Draw background
+        gl.glColor3f(*self.background_color)
+        if self.rounded_corners:
+            self._draw_rounded_rect(
+                self.x, self.y, self.width, self.height, self.height // 2
+            )
+        else:
+            self._draw_rect(self.x, self.y, self.width, self.height)
+
+        # Draw border
+        gl.glColor3f(*self.border_color)
+        gl.glLineWidth(1.5)
+        if self.rounded_corners:
+            self._draw_rounded_rect_outline(
+                self.x, self.y, self.width, self.height, self.height // 2
+            )
+        else:
+            self._draw_rect_outline(self.x, self.y, self.width, self.height)
+
+        # Draw progress bar
+        if progress_width > 0:
+            # Draw gradient progress
+            if progress_width >= 2:  # Only draw gradient if wide enough
+                self._draw_gradient_progress(
+                    self.x, self.y, progress_width, self.height
+                )
+            else:
+                gl.glColor3f(*self.progress_color_start)
+                if self.rounded_corners:
+                    self._draw_rounded_rect(
+                        self.x, self.y, progress_width, self.height, self.height // 2
+                    )
+                else:
+                    self._draw_rect(self.x, self.y, progress_width, self.height)
+
+            # Draw glow effect
+            if self.glow_effect and progress_width > 10:
+                self._draw_glow_effect(self.x + progress_width, self.y, self.height)
+
+        # Draw text
+        if self.show_text:
+            self._draw_text(progress_width)
+
+    def _update_animation(self):
+        # Smoothly animate towards target value
+        if abs(self.animation_progress - self.value) > 0.1:
+            self.animation_progress += (
+                self.value - self.animation_progress
+            ) * self.animation_speed
+        else:
+            self.animation_progress = self.value
+
+    def _draw_gradient_progress(self, x, y, width, height):
+        # Draw gradient from start to end color
+        radius = height // 2 if self.rounded_corners else 0
+
+        gl.glBegin(gl.GL_QUADS)
+
+        # Left side (start color)
+        gl.glColor3f(*self.progress_color_start)
+        if self.rounded_corners:
+            # Left rounded part
+            gl.glVertex2f(x + radius, y)
+            gl.glVertex2f(x + width, y)
+            gl.glColor3f(*self.progress_color_end)
+            gl.glVertex2f(x + width, y + height)
+            gl.glColor3f(*self.progress_color_start)
+            gl.glVertex2f(x + radius, y + height)
+        else:
+            # Simple gradient for rectangular bars
+            for i in range(4):  # 4 segments for smooth gradient
+                segment_width = width / 4
+                segment_x = x + i * segment_width
+                segment_color = self._interpolate_color(
+                    self.progress_color_start, self.progress_color_end, i / 3
+                )
+
+                gl.glColor3f(*segment_color)
+                gl.glVertex2f(segment_x, y)
+                gl.glVertex2f(segment_x + segment_width, y)
+                gl.glVertex2f(segment_x + segment_width, y + height)
+                gl.glVertex2f(segment_x, y + height)
+
+        gl.glEnd()
+
+        # Draw rounded ends if needed
+        if self.rounded_corners and radius > 0:
+            # Left rounded cap
+            gl.glColor3f(*self.progress_color_start)
+            self._draw_quarter_circle(x + radius, y + radius, radius, 180, 270)
+            self._draw_quarter_circle(x + radius, y + height - radius, radius, 90, 180)
+
+            # Right rounded cap (if progress reaches the end)
+            if width >= self.width - radius:
+                gl.glColor3f(*self.progress_color_end)
+                self._draw_quarter_circle(
+                    x + self.width - radius, y + radius, radius, 270, 360
+                )
+                self._draw_quarter_circle(
+                    x + self.width - radius, y + height - radius, radius, 0, 90
+                )
+
+    def _draw_glow_effect(self, x, y, height):
+        # Draw a subtle glow at the progress edge
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+
+        glow_width = 10
+        glow_height = height * 1.2
+
+        gl.glColor4f(*self.glow_color)
+        gl.glBegin(gl.GL_QUADS)
+        for i in range(glow_width):
+            alpha = 1.0 - (i / glow_width)
+            gl.glColor4f(
+                self.glow_color[0], self.glow_color[1], self.glow_color[2], alpha * 0.3
+            )
+
+            gl.glVertex2f(x + i, y - (glow_height - height) / 2)
+            gl.glVertex2f(x + i + 1, y - (glow_height - height) / 2)
+            gl.glVertex2f(x + i + 1, y + height + (glow_height - height) / 2)
+            gl.glVertex2f(x + i, y + height + (glow_height - height) / 2)
+
+        gl.glEnd()
+        gl.glDisable(gl.GL_BLEND)
+
+    def _draw_text(self, progress_width):
+        # Determine text to display
+        if self.show_percentage:
+            percentage = (self.value / self.max_value) * 100
+            text = f"{percentage:.1f}%"
+        else:
+            text = f"{self.value}/{self.max_value}"
+
+        # Calculate text position (centered)
+        text_width = sum(
+            glut.glutBitmapWidth(glut.GLUT_BITMAP_HELVETICA_12, ord(c)) for c in text
+        )
+        text_x = self.x + (self.width - text_width) // 2
+        text_y = self.y + self.height // 2 + 4
+
+        # Choose text color based on position
+        if text_x + text_width < self.x + progress_width:
+            text_color = self.text_color_over_progress
+        else:
+            text_color = self.text_color
+
+        # Draw text
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        gl.glOrtho(0, self.app.width, self.app.height, 0, -1, 1)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+        gl.glColor3f(*text_color)
+        gl.glRasterPos2f(text_x, text_y)
+
+        for char in text:
+            glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_12, ord(char))
+
+    def _interpolate_color(self, color1, color2, factor):
+        """Interpolate between two colors"""
+        return (
+            color1[0] + (color2[0] - color1[0]) * factor,
+            color1[1] + (color2[1] - color1[1]) * factor,
+            color1[2] + (color2[2] - color1[2]) * factor,
+        )
+
+    def set_value(self, value, animate=True):
+        """Set the progress value with optional animation"""
+        self.value = max(0, min(value, self.max_value))
+        if not animate:
+            self.animation_progress = self.value
+
+    def increment(self, amount=1, animate=True):
+        """Increment the progress value"""
+        self.set_value(self.value + amount, animate)
+
+    def decrement(self, amount=1, animate=True):
+        """Decrement the progress value"""
+        self.set_value(self.value - amount, animate)
+
+    def reset(self, animate=True):
+        """Reset progress to zero"""
+        self.set_value(0, animate)
+
+    def complete(self, animate=True):
+        """Set progress to maximum"""
+        self.set_value(self.max_value, animate)
+
+    # Drawing helper methods (reuse from other widgets)
+    def _draw_rect(self, x, y, width, height):
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex2f(x, y)
+        gl.glVertex2f(x + width, y)
+        gl.glVertex2f(x + width, y + height)
+        gl.glVertex2f(x, y + height)
+        gl.glEnd()
+
+    def _draw_rect_outline(self, x, y, width, height):
+        gl.glBegin(gl.GL_LINE_LOOP)
+        gl.glVertex2f(x, y)
+        gl.glVertex2f(x + width, y)
+        gl.glVertex2f(x + width, y + height)
+        gl.glVertex2f(x, y + height)
+        gl.glEnd()
+
+    def _draw_rounded_rect(self, x, y, width, height, radius):
+        # Implementation from previous widgets
+        pass
+
+    def _draw_rounded_rect_outline(self, x, y, width, height, radius):
+        # Implementation from previous widgets
+        pass
+
+    def _draw_quarter_circle(self, cx, cy, radius, start_angle, end_angle):
+        # Implementation from previous widgets
+        pass
