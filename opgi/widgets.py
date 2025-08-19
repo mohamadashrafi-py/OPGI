@@ -492,3 +492,218 @@ class ComboBox(Widget):
                 <= self.y + self.height + len(self.items) * self.item_height
             ):
                 self.expanded = False
+
+from OpenGL import GLUT as glut
+import math
+
+class List:
+    def __init__(self, x, y, width, height, items=None):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.app = None
+        self.items = items or []
+        self.selected_index = -1
+        self.scroll_offset = 0
+        self.item_height = 30
+        self.visible_items = height // self.item_height
+        self.hover_index = -1
+        self.on_selection_change = None
+        
+        # Colors
+        self.bg_color = (1, 1, 1)
+        self.border_color = (0.82, 0.82, 0.84)
+        self.text_color = (0.2, 0.2, 0.2)
+        self.hover_color = (0.95, 0.95, 0.98)
+        self.selected_color = (0.26, 0.52, 0.96)
+        self.selected_text_color = (1, 1, 1)
+        
+    def add_item(self, item):
+        self.items.append(item)
+        
+    def remove_item(self, index):
+        if 0 <= index < len(self.items):
+            self.items.pop(index)
+            if self.selected_index == index:
+                self.selected_index = -1
+                if self.on_selection_change:
+                    self.on_selection_change()
+            elif self.selected_index > index:
+                self.selected_index -= 1
+                
+    def clear(self):
+        self.items.clear()
+        self.selected_index = -1
+        self.scroll_offset = 0
+        
+    def draw(self):
+        # Draw background
+        gl.glColor3f(*self.bg_color)
+        self._draw_rounded_rect(self.x, self.y, self.width, self.height, 8)
+        
+        # Draw border
+        gl.glColor3f(*self.border_color)
+        self._draw_rounded_rect_outline(self.x, self.y, self.width, self.height, 8)
+        
+        # Draw scrollbar if needed
+        if len(self.items) > self.visible_items:
+            self._draw_scrollbar()
+        
+        # Draw visible items
+        start_idx = self.scroll_offset
+        end_idx = min(start_idx + self.visible_items, len(self.items))
+        
+        for i in range(start_idx, end_idx):
+            item_y = self.y + (i - start_idx) * self.item_height
+            self._draw_item(i, item_y)
+            
+    def _draw_item(self, index, y):
+        # Draw item background
+        if index == self.selected_index:
+            gl.glColor3f(*self.selected_color)
+        elif index == self.hover_index:
+            gl.glColor3f(*self.hover_color)
+        else:
+            gl.glColor3f(*self.bg_color)
+            
+        self._draw_rect(self.x + 2, y + 2, self.width - 4, self.item_height - 4)
+        
+        # Draw item text
+        text_color = self.selected_text_color if index == self.selected_index else self.text_color
+        text_x = self.x + 10
+        text_y = y + self.item_height // 2 + 5
+        
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        gl.glOrtho(0, self.app.width, self.app.height, 0, -1, 1)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+        gl.glColor3f(*text_color)
+        gl.glRasterPos2f(text_x, text_y)
+        
+        for char in str(self.items[index]):
+            glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
+        
+        # Draw separator line
+        if index < len(self.items) - 1 and index != self.selected_index:
+            gl.glColor3f(0.9, 0.9, 0.9)
+            self._draw_rect(self.x + 5, y + self.item_height - 1, self.width - 10, 1)
+            
+    def _draw_scrollbar(self):
+        total_items = len(self.items)
+        scrollbar_width = 10
+        scrollbar_x = self.x + self.width - scrollbar_width - 2
+        
+        # Calculate scrollbar metrics
+        visible_ratio = self.visible_items / total_items
+        scrollbar_height = max(30, self.height * visible_ratio)
+        max_scroll_pos = self.height - scrollbar_height
+        
+        # Calculate thumb position
+        scroll_ratio = self.scroll_offset / (total_items - self.visible_items)
+        thumb_y = self.y + scroll_ratio * max_scroll_pos
+        
+        # Draw scrollbar track
+        gl.glColor3f(0.9, 0.9, 0.9)
+        self._draw_rect(scrollbar_x, self.y, scrollbar_width, self.height)
+        
+        # Draw scrollbar thumb
+        gl.glColor3f(0.6, 0.6, 0.6)
+        self._draw_rounded_rect(scrollbar_x, thumb_y, scrollbar_width, scrollbar_height, 4)
+        
+    def contains(self, x, y):
+        return (self.x <= x <= self.x + self.width and 
+                self.y <= y <= self.y + self.height)
+                
+    def on_click(self):
+        x, y = glfw.get_cursor_pos(self.app.window)
+        if not self.contains(x, y):
+            return False
+            
+        # Check if clicking on an item
+        relative_y = y - self.y
+        item_index = self.scroll_offset + int(relative_y // self.item_height)
+        
+        if 0 <= item_index < len(self.items):
+            self.selected_index = item_index
+            if self.on_selection_change:
+                self.on_selection_change()
+            return True
+            
+        return False
+        
+    def get_selected_item(self):
+        if 0 <= self.selected_index < len(self.items):
+            return self.items[self.selected_index]
+        return None
+        
+    # Drawing helper methods
+    def _draw_rect(self, x, y, width, height):
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex2f(x, y)
+        gl.glVertex2f(x + width, y)
+        gl.glVertex2f(x + width, y + height)
+        gl.glVertex2f(x, y + height)
+        gl.glEnd()
+        
+    def _draw_rounded_rect(self, x, y, width, height, radius):
+        # Center rectangle
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex2f(x + radius, y)
+        gl.glVertex2f(x + width - radius, y)
+        gl.glVertex2f(x + width - radius, y + height)
+        gl.glVertex2f(x + radius, y + height)
+        gl.glEnd()
+        
+        # Left rectangle
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex2f(x, y + radius)
+        gl.glVertex2f(x + radius, y + radius)
+        gl.glVertex2f(x + radius, y + height - radius)
+        gl.glVertex2f(x, y + height - radius)
+        gl.glEnd()
+        
+        # Right rectangle
+        gl.glBegin(gl.GL_QUADS)
+        gl.glVertex2f(x + width - radius, y + radius)
+        gl.glVertex2f(x + width, y + radius)
+        gl.glVertex2f(x + width, y + height - radius)
+        gl.glVertex2f(x + width - radius, y + height - radius)
+        gl.glEnd()
+        
+        # Four corners (simplified)
+        self._draw_quarter_circle(x + radius, y + radius, radius, 180, 270)
+        self._draw_quarter_circle(x + width - radius, y + radius, radius, 270, 360)
+        self._draw_quarter_circle(x + width - radius, y + height - radius, radius, 0, 90)
+        self._draw_quarter_circle(x + radius, y + height - radius, radius, 90, 180)
+        
+    def _draw_rounded_rect_outline(self, x, y, width, height, radius):
+        gl.glLineWidth(2)
+        gl.glBegin(gl.GL_LINE_LOOP)
+        
+        # Top edge
+        gl.glVertex2f(x + radius, y)
+        gl.glVertex2f(x + width - radius, y)
+        
+        # Right edge
+        gl.glVertex2f(x + width, y + radius)
+        gl.glVertex2f(x + width, y + height - radius)
+        
+        # Bottom edge
+        gl.glVertex2f(x + width - radius, y + height)
+        gl.glVertex2f(x + radius, y + height)
+        
+        # Left edge
+        gl.glVertex2f(x, y + height - radius)
+        gl.glVertex2f(x, y + radius)
+        
+        gl.glEnd()
+        
+    def _draw_quarter_circle(self, cx, cy, radius, start_angle, end_angle):
+        gl.glBegin(gl.GL_TRIANGLE_FAN)
+        gl.glVertex2f(cx, cy)
+        for i in range(start_angle, end_angle + 1, 5):
+            angle = math.radians(i)
+            gl.glVertex2f(cx + math.cos(angle) * radius, cy + math.sin(angle) * radius)
+        gl.glEnd()
