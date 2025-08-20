@@ -6,20 +6,29 @@ from OpenGL import GLUT as glut
 
 
 class Widget:
-    def __init__(self, x, y, width, height):
+    """Base class for all widgets"""
+
+    def __init__(self, x=0, y=0, width=100, height=50):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
         self.app = None
+        self.visible = True
+
+    def draw(self):
+        """Base draw method - should be overridden by subclasses"""
+        pass
 
     def contains(self, x, y):
+        """Check if point is within widget bounds"""
         return (
             self.x <= x <= self.x + self.width and self.y <= y <= self.y + self.height
         )
 
-    def draw(self):
-        pass
+    def set_app(self, app):
+        """Set the application reference"""
+        self.app = app
 
 
 class Label(Widget):
@@ -35,24 +44,80 @@ class Label(Widget):
             glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
 
 
-class Button(Widget):
-    def __init__(self, text, x, y, width=100, height=40):
-        super().__init__(x, y, width, height)
-        self.text = text
-        self.color = (0.2, 0.5, 0.8)
+# class Button:
+#     def __init__(self, x, y, width, height, text="Button"):
+#         self.x = x
+#         self.y = y
+#         self.width = width
+#         self.height = height
+#         self.app = None
+#         self.text = str(text)  # Ensure text is always a string
+#         self.pressed = False
+#         self.on_click = None
+
+#     def draw(self):
+#         # Draw button background
+#         if self.pressed:
+#             gl.glColor3f(0.5, 0.5, 0.5)  # Darker when pressed
+#         else:
+#             gl.glColor3f(0.8, 0.8, 0.8)  # Normal color
+
+#         gl.glBegin(gl.GL_QUADS)
+#         gl.glVertex2f(self.x, self.y)
+#         gl.glVertex2f(self.x + self.width, self.y)
+#         gl.glVertex2f(self.x + self.width, self.y + self.height)
+#         gl.glVertex2f(self.x, self.y + self.height)
+#         gl.glEnd()
+
+#         # Draw button text (with safety check)
+#         if hasattr(self, 'text') and self.text:
+#             # Convert text to string to ensure it's iterable
+#             text_str = str(self.text)
+
+#             # Calculate text width safely
+#             text_width = 0
+#             for char in text_str:
+#                 text_width += glut.glutBitmapWidth(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
+
+#             # Calculate text position (centered)
+#             text_x = self.x + (self.width - text_width) // 2
+#             text_y = self.y + self.height // 2 + 5
+
+#             # Draw text
+#             gl.glMatrixMode(gl.GL_PROJECTION)
+#             gl.glLoadIdentity()
+#             gl.glOrtho(0, self.app.width, self.app.height, 0, -1, 1)
+#             gl.glMatrixMode(gl.GL_MODELVIEW)
+#             gl.glLoadIdentity()
+#             gl.glColor3f(0, 0, 0)  # Black text
+#             gl.glRasterPos2f(text_x, text_y)
+
+#             for char in text_str:
+#                 glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
+
+
+class Button:
+    def __init__(self, x, y, width, height, text="Button"):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.app = None
+        self.text = str(text)  # Ensure text is always a string
         self.pressed = False
-        self.on_click_callback = None
+        self.on_click = None
 
-    def on_click(self):
-        if self.on_click_callback:
-            self.on_click_callback()
-
-    def set_on_click(self, callback):
-        self.on_click_callback = callback
+    def set_app(self, app):
+        """Set the application reference"""
+        self.app = app
 
     def draw(self):
         # Draw button background
-        gl.glColor3f(*self.color)
+        if self.pressed:
+            gl.glColor3f(0.5, 0.5, 0.5)  # Darker when pressed
+        else:
+            gl.glColor3f(0.8, 0.8, 0.8)  # Normal color
+
         gl.glBegin(gl.GL_QUADS)
         gl.glVertex2f(self.x, self.y)
         gl.glVertex2f(self.x + self.width, self.y)
@@ -60,18 +125,51 @@ class Button(Widget):
         gl.glVertex2f(self.x, self.y + self.height)
         gl.glEnd()
 
-        # Draw button text
-        text_width = sum(
-            glut.glutBitmapWidth(glut.GLUT_BITMAP_HELVETICA_18, ord(c))
-            for c in self.text
-        )
-        text_x = self.x + (self.width - text_width) // 2
-        text_y = self.y + self.height // 2 + 5
+        # Draw button text (with safety check)
+        if hasattr(self, "text") and self.text:
+            # Convert text to string to ensure it's iterable
+            text_str = str(self.text)
 
-        gl.glColor3f(1, 1, 1)
-        gl.glRasterPos2f(text_x, text_y)
-        for char in self.text:
-            glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
+            # Calculate text width safely
+            text_width = 0
+            for char in text_str:
+                text_width += glut.glutBitmapWidth(
+                    glut.GLUT_BITMAP_HELVETICA_18, ord(char)
+                )
+
+            # Calculate text position (centered)
+            text_x = self.x + (self.width - text_width) // 2
+            text_y = self.y + self.height // 2 + 5
+
+            # Draw text with safe app reference handling
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()
+
+            if self.app and hasattr(self.app, "width") and hasattr(self.app, "height"):
+                # Use app dimensions if available
+                gl.glOrtho(0, self.app.width, self.app.height, 0, -1, 1)
+            else:
+                # Fallback to default dimensions
+                gl.glOrtho(0, 800, 600, 0, -1, 1)
+
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glLoadIdentity()
+            gl.glColor3f(0, 0, 0)  # Black text
+            gl.glRasterPos2f(text_x, text_y)
+
+            for char in text_str:
+                glut.glutBitmapCharacter(glut.GLUT_BITMAP_HELVETICA_18, ord(char))
+
+    def contains(self, x, y):
+        return (
+            self.x <= x <= self.x + self.width and self.y <= y <= self.y + self.height
+        )
+
+    def on_click(self):
+        if hasattr(self, "on_click") and self.on_click:
+            self.pressed = True
+            return True
+        return False
 
 
 class TextInput(Widget):
