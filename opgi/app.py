@@ -3,11 +3,6 @@ import OpenGL.GL as gl
 from OpenGL import GLUT as glut
 
 
-import glfw
-import OpenGL.GL as gl
-from OpenGL import GLUT as glut
-
-
 class App:
     def __init__(self, width=800, height=600, title="Simple GUI"):
         self.width = width

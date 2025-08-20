@@ -1,7 +1,3 @@
-from OpenGL import GLUT as glut
-import glfw
-import OpenGL.GL as gl
-import math
 
 
 class Layout:
