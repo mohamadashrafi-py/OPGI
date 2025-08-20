@@ -80,3 +80,29 @@ class Layout:
         return (self.x <= x <= self.x + self.width and 
                 self.y <= y <= self.y + self.height)
 
+
+class VerticalLayout(Layout):
+    def __init__(self, x=0, y=0, width=100, height=100):
+        super().__init__(x, y, width, height)
+        
+    def update_layout(self):
+        if not self.widgets:
+            return
+            
+        total_spacing = self.spacing * (len(self.widgets) - 1)
+        available_height = self.height - total_spacing - (self.padding * 2)
+        widget_height = available_height / len(self.widgets)
+        
+        current_y = self.y + self.padding
+        
+        for widget in self.widgets:
+            widget.x = self.x + self.padding
+            widget.y = current_y
+            widget.width = self.width - (self.padding * 2)
+            widget.height = widget_height
+            
+            current_y += widget_height + self.spacing
+            
+            if hasattr(widget, 'update_layout'):
+                widget.update_layout()
+
