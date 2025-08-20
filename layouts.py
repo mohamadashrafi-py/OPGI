@@ -106,3 +106,27 @@ class VerticalLayout(Layout):
             if hasattr(widget, 'update_layout'):
                 widget.update_layout()
 
+class HorizontalLayout(Layout):
+    def __init__(self, x=0, y=0, width=100, height=100):
+        super().__init__(x, y, width, height)
+        
+    def update_layout(self):
+        if not self.widgets:
+            return
+            
+        total_spacing = self.spacing * (len(self.widgets) - 1)
+        available_width = self.width - total_spacing - (self.padding * 2)
+        widget_width = available_width / len(self.widgets)
+        
+        current_x = self.x + self.padding
+        
+        for widget in self.widgets:
+            widget.x = current_x
+            widget.y = self.y + self.padding
+            widget.width = widget_width
+            widget.height = self.height - (self.padding * 2)
+            
+            current_x += widget_width + self.spacing
+            
+            if hasattr(widget, 'update_layout'):
+                widget.update_layout()
