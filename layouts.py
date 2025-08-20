@@ -130,3 +130,34 @@ class HorizontalLayout(Layout):
             
             if hasattr(widget, 'update_layout'):
                 widget.update_layout()
+
+class GridLayout(Layout):
+    def __init__(self, x=0, y=0, width=100, height=100, rows=2, cols=2):
+        super().__init__(x, y, width, height)
+        self.rows = rows
+        self.cols = cols
+        
+    def update_layout(self):
+        if not self.widgets:
+            return
+            
+        total_row_spacing = self.spacing * (self.rows - 1)
+        total_col_spacing = self.spacing * (self.cols - 1)
+        
+        cell_width = (self.width - total_col_spacing - (self.padding * 2)) / self.cols
+        cell_height = (self.height - total_row_spacing - (self.padding * 2)) / self.rows
+        
+        for i, widget in enumerate(self.widgets):
+            if i >= self.rows * self.cols:
+                break
+                
+            row = i // self.cols
+            col = i % self.cols
+            
+            widget.x = self.x + self.padding + col * (cell_width + self.spacing)
+            widget.y = self.y + self.padding + row * (cell_height + self.spacing)
+            widget.width = cell_width
+            widget.height = cell_height
+            
+            if hasattr(widget, 'update_layout'):
+                widget.update_layout()
